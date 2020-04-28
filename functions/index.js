@@ -1,7 +1,9 @@
 const admin = require('firebase-admin')
-const functions = require ('firebase-functions')
+const functions = require('firebase-functions')
 admin.initializeApp(functions.config().firebase)
 const firestore = admin.firestore()
+const cors = require('cors')
+const corsHandler = cors({ origin: true })
 
 exports.dados = functions.https.onRequest((req, res) => {
 
@@ -31,7 +33,7 @@ exports.dados = functions.https.onRequest((req, res) => {
   //se a plataforma for o coletor, essa id será a id unica do cliente em /empresas/{dbkey}/clientes/{id}
   //será necessário fazer uma busca no banco de dados pelo documento com a id igual essa id
   switch (plataforma) {
-    case "coletor":
+    case 'coletor':
       return firestore.doc('/sistema/coletor').get().then(coletor => {
 
         var data = new Date()
@@ -54,7 +56,7 @@ exports.dados = functions.https.onRequest((req, res) => {
           res.status(200).send(ret)
           return
         } else {
-          return firestore.collectionGroup("clientes").where("id", "==", id).get().then(query => {
+          return firestore.collectionGroup("clientes").where('id', '==', id).get().then(query => {
             query.forEach((cliente) => {
               ret.valid = true
               ret.cliente = cliente.data()
@@ -177,6 +179,28 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
     }
     return firestore.doc('/empresas/' + empresa + '/clientes/' + id).set(impressoras, {merge: true}).then(() => {
       res.status(200).send("ok")
+      return
+    })
+  })
+})
+
+exports.autenticar = functions.https.onRequest((req, res) => {
+
+  corsHandler(req, res, async () => {
+    const usuario = req.query.usuario
+    const senha = req.query.senha
+    var auth = new Object()
+    auth.autenticado = false
+
+    return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+      query.forEach(usuario => {
+        auth.nome = usuario.data().nome
+        auth.usuario = usuario.data().usuario
+        auth.senha = usuario.data().senha
+        auth.empresa = usuario.data().empresa
+        auth.autenticado = true
+      })
+      res.status(200).send(auth)
       return
     })
   })
