@@ -105,8 +105,8 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
     if(cliente.data().impressoras[serial] !== undefined) {
       if(cliente.data().impressoras[serial].ativa) {
         //se a impressora existir e for ativa
-        console.log("leituras undefined? ", cliente.data().impressoras[serial].leituras[ano + "-" + mes].inicial === undefined)
-        if(cliente.data().impressoras[serial].leituras[ano + "-" + mes].inicial.valor !== undefined) {
+        console.log("leituras undefined? ", cliente.data().impressoras[serial].leituras[ano + "-" + mes] === undefined)
+        if(cliente.data().impressoras[serial].leituras[ano + "-" + mes] !== undefined) {
           //se já tiver o primeiro registro de leitura do mês
           impressoras = {
             impressoras: {
