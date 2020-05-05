@@ -9,17 +9,20 @@ exports.dados = functions.https.onRequest((req, res) => {
 
   const compare = (vlocal, vserver) => {
     var result = false
-    for (var i = 0; i < ( Math.max(vlocal.split('.').length, vserver.split('.').length)); i++){
-      if(vlocal[i] === undefined){ vlocal[i] = 0 }
-      if(vserver[i] === undefined){ vserver[i] = 0 }
+    if(typeof vlocal !== 'object'){ vlocal = vlocal.toString().split('.') }
+    if(typeof vserver !== 'object'){ vserver = vserver.toString().split('.') }
 
-      if(Number(vlocal[i]) < Number(vserver[i])){
-        result = true
-        break
-      }
-      if(vlocal[i] !== vserver[i]){
-        break
-      }
+    for(var i = 0; i < (Math.max(vlocal.length, vserver.length)); i++){
+        if(vlocal[i] == undefined){ vlocal[i]= 0 }
+        if(vserver[i] == undefined){ vserver[i] = 0 }
+
+        if(Number(vlocal[i]) < Number(vserver[i])){
+            result = true
+            break
+        }
+        if(vlocal[i] != vserver[i]){
+            break
+        }
     }
     return result
   }
