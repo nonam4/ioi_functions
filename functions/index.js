@@ -96,7 +96,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
   var ano = data.getFullYear()
   var mes = data.getMonth() + 1;
   (mes < 10) ? mes = "0" + mes : 0;
-  var dia = data.getDay() + 1;
+  var dia = data.getDate();
   (dia < 10) ? dia = "0" + dia : 0;
 
   return firestore.doc('/empresas/' + empresa + '/clientes/' + id).get().then(cliente => {
