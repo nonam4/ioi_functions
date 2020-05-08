@@ -190,7 +190,6 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
 })
 
 exports.autenticar = functions.https.onRequest((req, res) => {
-
   corsHandler(req, res, async () => {
     const usuario = req.query.usuario
     const senha = req.query.senha
@@ -207,6 +206,41 @@ exports.autenticar = functions.https.onRequest((req, res) => {
       })
       res.status(200).send(auth)
       return
+    })
+  })
+})
+
+exports.gravarCliente = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    const usuario = req.query.usuario
+    const senha = req.query.senha
+    var auth = new Object()
+    auth.autenticado = false
+
+    return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+      query.forEach(usuario => {
+        auth.usuario = usuario.data().usuario
+        auth.senha = usuario.data().senha
+        auth.empresa = usuario.data().empresa
+        auth.permissao = usuario.data().permissao
+        auth.autenticado = true
+      })
+      if(auth.autenticado) {
+        if(auth.permissao.criar || auth.permissao.modificar) {
+
+          var cliente = JSON.parse(req.query.cliente)
+          return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
+            res.status(200).send('ok')
+            return
+          })
+        } else {
+          res.status(401).send("Usuário sem permissão")
+          return
+        }
+      } else {
+        res.status(401).send("Usuário não autenticado")
+        return
+      }
     })
   })
 })
