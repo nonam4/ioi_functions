@@ -6,83 +6,125 @@ const cors = require('cors')
 const corsHandler = cors({ origin: true })
 
 exports.dados = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    const compare = (vlocal, vserver) => {
+      var result = false
+      if(typeof vlocal !== 'object'){ vlocal = vlocal.toString().split('.') }
+      if(typeof vserver !== 'object'){ vserver = vserver.toString().split('.') }
 
-  const compare = (vlocal, vserver) => {
-    var result = false
-    if(typeof vlocal !== 'object'){ vlocal = vlocal.toString().split('.') }
-    if(typeof vserver !== 'object'){ vserver = vserver.toString().split('.') }
+      for(var i = 0; i < (Math.max(vlocal.length, vserver.length)); i++){
+          if(vlocal[i] == undefined){ vlocal[i]= 0 }
+          if(vserver[i] == undefined){ vserver[i] = 0 }
 
-    for(var i = 0; i < (Math.max(vlocal.length, vserver.length)); i++){
-        if(vlocal[i] == undefined){ vlocal[i]= 0 }
-        if(vserver[i] == undefined){ vserver[i] = 0 }
-
-        if(Number(vlocal[i]) < Number(vserver[i])){
-            result = true
-            break
-        }
-        if(vlocal[i] != vserver[i]){
-            break
-        }
-    }
-    return result
-  }
-
-  const plataforma = req.query.plataforma
-  const sistema = req.query.sistema
-  const versao = req.query.versao
-  const id = req.query.id
-  const local = req.query.local
-
-  //se a plataforma for o coletor, essa id será a id unica do cliente em /empresas/{dbkey}/clientes/{id}
-  //será necessário fazer uma busca no banco de dados pelo documento com a id igual essa id
-  switch (plataforma) {
-    case 'coletor':
-      return firestore.doc('/sistema/coletor').get().then(coletor => {
-
-        var data = new Date()
-        var ano = data.getFullYear()
-        var mes = data.getMonth() + 1;
-        (mes < 10) ? mes = "0" + mes : 0;
-
-        const server = coletor.data().versao
-        var ret = new Object()
-        ret.valid = false
-        ret.atualizar = compare(versao, server)
-
-        if(ret.atualizar) {
-          ret.versao = server
-          if(sistema === 'win32') {
-            ret.url = coletor.data().windows
-          } else {
-            ret.url = coletor.data().linux
+          if(Number(vlocal[i]) < Number(vserver[i])){
+              result = true
+              break
           }
-          res.status(200).send(ret)
-          return
-        } else {
-          return firestore.collectionGroup("clientes").where('id', '==', id).get().then(query => {
-            query.forEach((cliente) => {
-              ret.valid = true
-              ret.cliente = cliente.data()
+          if(vlocal[i] != vserver[i]){
+              break
+          }
+      }
+      return result
+    }
+
+    const plataforma = req.query.plataforma
+    //se a plataforma for o coletor, essa id será a id unica do cliente em /empresas/{dbkey}/clientes/{id}
+    //será necessário fazer uma busca no banco de dados pelo documento com a id igual essa id
+    switch (plataforma) {
+      case 'coletor':
+
+        const sistema = req.query.sistema
+        const versao = req.query.versao
+        const id = req.query.id
+        const local = req.query.local
+
+        return firestore.doc('/sistema/coletor').get().then(coletor => {
+
+          var data = new Date()
+          var ano = data.getFullYear()
+          var mes = data.getMonth() + 1;
+          (mes < 10) ? mes = "0" + mes : 0;
+
+          const server = coletor.data().versao
+          var ret = new Object()
+          ret.valid = false
+          ret.atualizar = compare(versao, server)
+
+          if(ret.atualizar) {
+            ret.versao = server
+            if(sistema === 'win32') {
+              ret.url = coletor.data().windows
+            } else {
+              ret.url = coletor.data().linux
+            }
+            res.status(200).send(ret)
+            return
+          } else {
+            return firestore.collectionGroup("clientes").where('id', '==', id).get().then(query => {
+              query.forEach((cliente) => {
+                ret.valid = true
+                ret.cliente = cliente.data()
+              })
+              return firestore.doc('/empresas/' + ret.cliente.empresa + '/clientes/' + id).set({
+                sistema: {
+                  local: local,
+                  versao: versao
+                }
+              }, {merge: true}).then(() => {
+                res.status(200).send(ret)
+                return
+              })
             })
-            return firestore.doc('/empresas/' + ret.cliente.empresa + '/clientes/' + id).set({
-              sistema: {
-                local: local,
-                versao: versao
-              }
-            }, {merge: true}).then(() => {
-              res.status(200).send(ret)
-              return
-            })
+          }
+        })
+      case 'mobile':
+        res.status(200).send("mobile")
+        break
+      case 'web':
+
+        const usuario = req.query.usuario
+        const senha = req.query.senha
+        var auth = new Object()
+        auth.autenticado = false
+
+        return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+          query.forEach(usuario => {
+            auth.empresa = usuario.data().empresa
+            auth.autenticado = true
           })
-        }
-      })
-    case 'mobile':
-      res.status(200).send("mobile")
-      break
-    case 'web':
-      res.status(200).send("web")
-      break
-  }
+          if(auth.autenticado) {
+            var ret = new Object()
+            ret.usuarios = []
+            ret.clientes = []
+            ret.atendimentos = []
+
+            return firestore.collection("usuarios").where('empresa', '==', auth.empresa).get().then(query => {
+              query.forEach(usuario => {
+                ret.usuarios.push(usuario.data())
+              })
+
+              return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+                query.forEach(cliente => {
+                  ret.clientes.push(cliente.data())
+                })
+
+                return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
+                  query.forEach(atendimento => {
+                    ret.atendimentos.push(atendimento.data())
+                  })
+
+                  res.status(200).send(ret)
+                  return
+                })
+              })
+            })
+          } else {
+            res.status(401).send("Usuário não autenticado")
+            return
+          }
+        })
+    }
+  })
 })
 
 exports.gravarImpressora = functions.https.onRequest((req, res) => {
@@ -219,9 +261,6 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
 
     return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
       query.forEach(usuario => {
-        auth.usuario = usuario.data().usuario
-        auth.senha = usuario.data().senha
-        auth.empresa = usuario.data().empresa
         auth.permissao = usuario.data().permissao
         auth.autenticado = true
       })
