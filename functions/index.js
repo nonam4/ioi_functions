@@ -146,11 +146,9 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
 
   return firestore.doc('/empresas/' + empresa + '/clientes/' + id).get().then(cliente => {
     var impressoras = new Object()
-    console.log("impressora undefined? ", cliente.data().impressoras[serial] === undefined)
-    if(cliente.data().impressoras[serial] !== undefined) {
+    if(cliente.data().impressoras != undefined && cliente.data().impressoras[serial] !== undefined) {
       if(cliente.data().impressoras[serial].ativa) {
         //se a impressora existir e for ativa
-        console.log("leituras undefined? ", cliente.data().impressoras[serial].leituras[ano + "-" + mes] === undefined)
         if(cliente.data().impressoras[serial].leituras[ano + "-" + mes] !== undefined) {
           //se já tiver o primeiro registro de leitura do mês
           impressoras = {
@@ -263,6 +261,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
       query.forEach(usuario => {
         auth.permissao = usuario.data().permissao
         auth.autenticado = true
+        auth.empresa = usuario.data().empresa
       })
       if(auth.autenticado) {
         if(auth.permissao.criar || auth.permissao.modificar) {
