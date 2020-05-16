@@ -147,50 +147,49 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
   return firestore.doc('/empresas/' + empresa + '/clientes/' + id).get().then(cliente => {
     var impressoras = new Object()
     if(cliente.data().impressoras != undefined && cliente.data().impressoras[serial] !== undefined) {
-      if(cliente.data().impressoras[serial].ativa) {
-        //se a impressora existir e for ativa
-        if(cliente.data().impressoras[serial].leituras[ano + "-" + mes] !== undefined) {
-          //se já tiver o primeiro registro de leitura do mês
-          impressoras = {
-            impressoras: {
-              [serial]: {
-                leituras: {
-                  [ano + "-" + mes]: {
-                    final: {
-                      valor: leitura,
-                      dia: dia
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } else {
-          //caso seja um mês novo
-          impressoras = {
-            impressoras: {
-              [serial]: {
-                leituras: {
-                  [ano + "-" + mes]: {
-                    inicial: {
-                      valor: leitura,
-                      dia: dia
-                    }, final: {
-                      valor: leitura,
-                      dia: dia
-                    }
+      if(cliente.data().impressoras[serial].leituras[ano + "-" + mes] !== undefined) {
+        //se já tiver o primeiro registro de leitura do mês
+        impressoras = {
+          impressoras: {
+            [serial]: {
+              ativa: true,
+              leituras: {
+                [ano + "-" + mes]: {
+                  final: {
+                    valor: leitura,
+                    dia: dia
                   }
                 }
               }
             }
           }
         }
-        //atualiza os niveis de tinta de acordo com a capacidade dele
-        if(cliente.data().impressoras[serial].tinta.capacidade !== "ilimitado") {
-          impressoras.impressoras[serial].tinta = new Object()
-          impressoras.impressoras[serial].tinta.impresso = leitura - cliente.data().impressoras[serial].tinta.cheio
-          impressoras.impressoras[serial].tinta.nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
+      } else {
+        //caso seja um mês novo
+        impressoras = {
+          impressoras: {
+            [serial]: {
+              ativa: true,
+              leituras: {
+                [ano + "-" + mes]: {
+                  inicial: {
+                    valor: leitura,
+                    dia: dia
+                  }, final: {
+                    valor: leitura,
+                    dia: dia
+                  }
+                }
+              }
+            }
+          }
         }
+      }
+      //atualiza os niveis de tinta de acordo com a capacidade dele
+      if(cliente.data().impressoras[serial].tinta.capacidade !== "ilimitado") {
+        impressoras.impressoras[serial].tinta = new Object()
+        impressoras.impressoras[serial].tinta.impresso = leitura - cliente.data().impressoras[serial].tinta.cheio
+        impressoras.impressoras[serial].tinta.nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
       }
     } else {
       //caso seja uma impressora nova
