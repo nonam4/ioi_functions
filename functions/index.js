@@ -270,6 +270,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
         if(auth.permissao.criar || auth.permissao.modificar) {
 
           var cliente = JSON.parse(req.query.cliente)
+          cliente.empresa = auth.empresa
           return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
             res.status(200).send('ok')
             return
