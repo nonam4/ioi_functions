@@ -42,8 +42,8 @@ exports.dados = functions.https.onRequest((req, res) => {
 
           var data = new Date()
           var ano = data.getFullYear()
-          var mes = data.getMonth() + 1;
-          (mes < 10) ? mes = "0" + mes : 0;
+          var mes = data.getMonth() + 1
+          if (mes < 10) { mes = "0" + mes }
 
           const server = coletor.data().versao
           var ret = new Object()
@@ -111,10 +111,14 @@ exports.dados = functions.https.onRequest((req, res) => {
                 return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
                   query.forEach(atendimento => {
                     ret.atendimentos.push(atendimento.data())
-                  })
 
-                  res.status(200).send(ret)
-                  return
+                    return firestore.doc('/sistema/coletor').get().then(coletor => {
+
+                      ret.versao = coletor.data().versao
+                      res.status(200).send(ret)
+                      return
+                    })
+                  })
                 })
               })
             })
