@@ -94,32 +94,32 @@ exports.dados = functions.https.onRequest((req, res) => {
           })
           if(auth.autenticado) {
             var ret = new Object()
-            ret.usuarios = []
-            ret.clientes = []
-            ret.atendimentos = []
+            ret.usuarios = {}
+            ret.clientes = {}
+            ret.atendimentos = {}
 
-            return firestore.collection("usuarios").where('empresa', '==', auth.empresa).get().then(query => {
-              query.forEach(usuario => {
-                ret.usuarios.push(usuario.data())
+            return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+              query.forEach(cliente => {
+                ret.clientes[cliente.data().id] = cliente.data()
               })
 
-              return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
-                query.forEach(cliente => {
-                  ret.clientes.push(cliente.data())
+              return firestore.collection("usuarios").where('empresa', '==', auth.empresa).get().then(query => {
+                query.forEach(usuario => {
+                  ret.usuarios[usuario.data().id] = usuario.data()
                 })
 
                 return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
                   query.forEach(atendimento => {
-                    ret.atendimentos.push(atendimento.data())
-
-                    return firestore.doc('/sistema/coletor').get().then(coletor => {
-
-                      ret.versao = coletor.data().versao
-                      res.status(200).send(ret)
-                      return
-                    })
+                    ret.atendimentos[atendimento.data().id] = atendimento.data()
                   })
-                })
+
+                  return firestore.doc('/sistema/coletor').get().then(coletor => {
+
+                    ret.versao = coletor.data().versao
+                    res.status(200).send(ret)
+                    return
+                  })                
+                })                
               })
             })
           } else {
@@ -272,6 +272,39 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
           var cliente = JSON.parse(req.query.cliente)
           cliente.empresa = auth.empresa
           return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
+            res.status(200).send('ok')
+            return
+          })
+        } else {
+          res.status(401).send("Usuário sem permissão")
+          return
+        }
+      } else {
+        res.status(401).send("Usuário não autenticado")
+        return
+      }
+    })
+  })
+})
+
+exports.gravarOrdem = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    const usuario = req.query.usuario
+    const senha = req.query.senha
+    var auth = new Object()
+    auth.autenticado = false
+
+    return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+      query.forEach(usuario => {
+        auth.permissao = usuario.data().permissao
+        auth.autenticado = true
+        auth.empresa = usuario.data().empresa
+      })
+      if(auth.autenticado) {
+        if(auth.permissao.criar || auth.permissao.modificar) {
+
+          var ordens = JSON.parse(req.query.ordens)
+          return firestore.doc('/empresas/' + auth.empresa + '/atendimentos/').set(ordens, {merge: true}).then(() => {
             res.status(200).send('ok')
             return
           })
