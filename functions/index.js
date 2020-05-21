@@ -287,7 +287,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
   })
 })
 
-exports.gravarOrdem = functions.https.onRequest((req, res) => {
+exports.gravarAtendimentos = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     const usuario = req.query.usuario
     const senha = req.query.senha
@@ -303,8 +303,17 @@ exports.gravarOrdem = functions.https.onRequest((req, res) => {
       if(auth.autenticado) {
         if(auth.permissao.criar || auth.permissao.modificar) {
 
-          var ordens = JSON.parse(req.query.ordens)
-          return firestore.doc('/empresas/' + auth.empresa + '/atendimentos/').set(ordens, {merge: true}).then(() => {
+          var batch = firestore.batch()
+          var atendimentos = JSON.parse(req.query.atendimentos)
+
+          for(var y = 0; y < Object.keys(atendimentos).length; y++) {
+            var atendimento = atendimentos[Object.keys(atendimentos)[y]]   
+        
+            var ref = firestore.doc('/empresas/' + auth.empresa + '/atendimentos/' + atendimento.id)
+            batch.set(ref, atendimento, {merge: true})
+          }
+
+          batch.commit().then(() => {
             res.status(200).send('ok')
             return
           })
