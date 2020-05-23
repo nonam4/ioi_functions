@@ -245,6 +245,7 @@ exports.autenticar = functions.https.onRequest((req, res) => {
         auth.usuario = usuario.data().usuario
         auth.senha = usuario.data().senha
         auth.empresa = usuario.data().empresa
+        auth.permissao = usuario.data().permissao
         auth.autenticado = true
       })
       res.status(200).send(auth)
