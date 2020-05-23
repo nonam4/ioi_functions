@@ -89,11 +89,17 @@ exports.dados = functions.https.onRequest((req, res) => {
 
         return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
           query.forEach(usuario => {
+            auth.nome = usuario.data().nome
+            auth.usuario = usuario.data().usuario
+            auth.senha = usuario.data().senha
             auth.empresa = usuario.data().empresa
+            auth.permissao = usuario.data().permissao
             auth.autenticado = true
           })
+          var ret = new Object()
+          ret.auth = auth
           if(auth.autenticado) {
-            var ret = new Object()
+            
             ret.usuarios = {}
             ret.clientes = {}
             ret.atendimentos = {}
@@ -123,7 +129,7 @@ exports.dados = functions.https.onRequest((req, res) => {
               })
             })
           } else {
-            res.status(401).send("Usuário não autenticado")
+            res.status(200).send(ret)
             return
           }
         })
