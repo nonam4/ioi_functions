@@ -104,30 +104,30 @@ exports.dados = functions.https.onRequest((req, res) => {
             ret.clientes = {}
             ret.atendimentos = {}
 
-            return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
-              query.forEach(cliente => {
-                ret.clientes[cliente.data().id] = cliente.data()
-              })
+            return firestore.doc('/sistema/coletor').get().then(coletor => {
+              ret.versao = coletor.data().versao
 
               return firestore.collection("usuarios").where('empresa', '==', auth.empresa).get().then(query => {
                 query.forEach(usuario => {
                   ret.usuarios[usuario.data().id] = usuario.data()
                 })
-
+  
                 return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
                   query.forEach(atendimento => {
                     ret.atendimentos[atendimento.data().id] = atendimento.data()
                   })
-
-                  return firestore.doc('/sistema/coletor').get().then(coletor => {
-
-                    ret.versao = coletor.data().versao
+    
+                  return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+                    query.forEach(cliente => {
+                      ret.clientes[cliente.data().id] = cliente.data()
+                    })
+      
                     res.status(200).send(ret)
                     return
-                  })                
+                  })               
                 })                
               })
-            })
+            }) 
           } else {
             res.status(200).send(ret)
             return
@@ -238,6 +238,10 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
   })
 })
 
+/*
+* funções de controle do site
+* toda requisição deverá ser autenticada e permissões devem ser verificadas
+*/
 exports.autenticar = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
     const usuario = req.query.usuario
@@ -276,6 +280,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
       if(auth.autenticado) {
         if(auth.permissao.criar || auth.permissao.modificar) {
 
+          auth.erro = false
           var cliente = JSON.parse(req.query.cliente)
           cliente.empresa = auth.empresa
           return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
@@ -283,11 +288,13 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
             return
           })
         } else {
-          res.status(401).send("Usuário sem permissão")
+          auth.erro = true
+          auth.msg = "Usuário sem permissão! Nenhuma alteração foi realizada!"
+          res.status(200).send(auth)
           return
         }
       } else {
-        res.status(401).send("Usuário não autenticado")
+        res.status(200).send(auth)
         return
       }
     })
@@ -309,7 +316,7 @@ exports.gravarAtendimentos = functions.https.onRequest((req, res) => {
       })
       if(auth.autenticado) {
         if(auth.permissao.criar || auth.permissao.modificar) {
-
+          auth.erro = false
           var batch = firestore.batch()
           var atendimentos = JSON.parse(req.query.atendimentos)
 
@@ -325,11 +332,13 @@ exports.gravarAtendimentos = functions.https.onRequest((req, res) => {
             return
           })
         } else {
-          res.status(401).send("Usuário sem permissão")
+          auth.erro = true
+          auth.msg = "Usuário sem permissão! Nenhuma alteração foi realizada!"
+          res.status(200).send(auth)
           return
         }
       } else {
-        res.status(401).send("Usuário não autenticado")
+        res.status(200).send(auth)
         return
       }
     })
