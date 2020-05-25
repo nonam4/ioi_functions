@@ -103,6 +103,7 @@ exports.dados = functions.https.onRequest((req, res) => {
             ret.usuarios = {}
             ret.clientes = {}
             ret.atendimentos = {}
+            ret.suprimentos = {}
 
             return firestore.doc('/sistema/coletor').get().then(coletor => {
               ret.versao = coletor.data().versao
@@ -121,9 +122,15 @@ exports.dados = functions.https.onRequest((req, res) => {
                     query.forEach(cliente => {
                       ret.clientes[cliente.data().id] = cliente.data()
                     })
-      
-                    res.status(200).send(ret)
-                    return
+
+                    return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
+                      query.forEach(suprimento => {
+                        ret.suprimentos[suprimento.data().id] = suprimento.data()
+                      })
+        
+                      res.status(200).send(ret)
+                      return
+                    })
                   })               
                 })                
               })
@@ -284,7 +291,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
           var cliente = JSON.parse(req.query.cliente)
           cliente.empresa = auth.empresa
           return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
-            res.status(200).send('ok')
+            res.status(200).send(auth)
             return
           })
         } else {
@@ -325,6 +332,50 @@ exports.gravarAtendimentos = functions.https.onRequest((req, res) => {
         
             var ref = firestore.doc('/empresas/' + auth.empresa + '/atendimentos/' + atendimento.id)
             batch.set(ref, atendimento, {merge: true})
+          }
+
+          batch.commit().then(() => {
+            res.status(200).send(auth)
+            return
+          })
+        } else {
+          auth.erro = true
+          auth.msg = "Usuário sem permissão! Nenhuma alteração foi realizada!"
+          res.status(200).send(auth)
+          return
+        }
+      } else {
+        res.status(200).send(auth)
+        return
+      }
+    })
+  })
+})
+
+exports.gravarSuprimentos = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    const usuario = req.query.usuario
+    const senha = req.query.senha
+    var auth = new Object()
+    auth.autenticado = false
+
+    return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+      query.forEach(usuario => {
+        auth.permissao = usuario.data().permissao
+        auth.autenticado = true
+        auth.empresa = usuario.data().empresa
+      })
+      if(auth.autenticado) {
+        if(auth.permissao.criar || auth.permissao.modificar) {
+          auth.erro = false
+          var batch = firestore.batch()
+          var suprimentos = JSON.parse(req.query.suprimentos)
+
+          for(var y = 0; y < Object.keys(suprimentos).length; y++) {
+            var suprimento = suprimentos[Object.keys(suprimentos)[y]]   
+        
+            var ref = firestore.doc('/empresas/' + auth.empresa + '/suprimentos/' + suprimento.id)
+            batch.set(ref, suprimento, {merge: true})
           }
 
           batch.commit().then(() => {
