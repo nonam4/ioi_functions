@@ -328,7 +328,7 @@ exports.gravarAtendimentos = functions.https.onRequest((req, res) => {
           }
 
           batch.commit().then(() => {
-            res.status(200).send('ok')
+            res.status(200).send(auth)
             return
           })
         } else {
