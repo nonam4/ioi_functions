@@ -263,9 +263,22 @@ exports.autenticar = functions.https.onRequest((req, res) => {
         auth.senha = usuario.data().senha
         auth.empresa = usuario.data().empresa
         auth.permissao = usuario.data().permissao
+        auth.id = usuario.data().id
         auth.autenticado = true
       })
       res.status(200).send(auth)
+      return
+    })
+  })
+})
+
+exports.gravarToken = functions.https.onRequest((req, res) => {
+  corsHandler(req, res, async () => {
+    const id = req.query.id
+    const token = req.query.token
+
+    return firestore.doc('/usuarios/' + id).set({ token: token }, {merge: true}).then(() => {
+      res.status(200).send('ok')
       return
     })
   })
