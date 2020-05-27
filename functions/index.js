@@ -78,12 +78,64 @@ exports.dados = functions.https.onRequest((req, res) => {
           }
         })
       case 'mobile':
-        res.status(200).send("mobile")
-        break
+        
+        var usuario = req.query.usuario
+        var senha = req.query.senha
+        var auth = new Object()
+        auth.autenticado = false
+
+        return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+          query.forEach(usuario => {
+            auth.nome = usuario.data().nome
+            auth.usuario = usuario.data().usuario
+            auth.senha = usuario.data().senha
+            auth.empresa = usuario.data().empresa
+            auth.permissao = usuario.data().permissao
+            auth.autenticado = true
+          })
+          var ret = new Object()
+          ret.auth = auth
+          if(auth.autenticado) {
+            
+            ret.clientes = {}
+            ret.atendimentos = {}
+            ret.suprimentos = {}
+            
+            return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+              query.forEach(cliente => {
+                ret.clientes[cliente.data().id] = cliente.data()
+              })
+
+              return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').orderBy("ordem", "asc")
+              .where('responsavel', '==', auth.nome).where('feito', '==', false).get().then(query => {
+                query.forEach(atendimento => {
+                  
+                  if(ret.clientes[atendimento.data().cliente] != undefined) {
+                    ret.atendimentos[atendimento.data().id] = atendimento.data()
+                    ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
+                  } 
+                })
+  
+                return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
+                  query.forEach(suprimento => {
+                    ret.suprimentos[suprimento.data().id] = suprimento.data()
+                  })
+    
+                  res.status(200).send(ret)
+                  return
+                })              
+              })
+            })
+            
+          } else {
+            res.status(200).send(ret)
+            return
+          }
+        })
       case 'web':
 
-        const usuario = req.query.usuario
-        const senha = req.query.senha
+        var usuario = req.query.usuario
+        var senha = req.query.senha
         var auth = new Object()
         auth.autenticado = false
 
@@ -113,15 +165,18 @@ exports.dados = functions.https.onRequest((req, res) => {
                   ret.usuarios[usuario.data().id] = usuario.data()
                 })
   
-                return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
-                  query.forEach(atendimento => {
-                    ret.atendimentos[atendimento.data().id] = atendimento.data()
+                return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+                  query.forEach(cliente => {
+                    ret.clientes[cliente.data().id] = cliente.data()
                   })
-    
-                  return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
-                    query.forEach(cliente => {
-                      ret.clientes[cliente.data().id] = cliente.data()
-                    })
+
+                  return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
+                    query.forEach(atendimento => {
+                      if(ret.clientes[atendimento.data().cliente] != undefined) {
+                        ret.atendimentos[atendimento.data().id] = atendimento.data()
+                        ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
+                      } 
+                    })   
 
                     return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
                       query.forEach(suprimento => {
@@ -131,8 +186,8 @@ exports.dados = functions.https.onRequest((req, res) => {
                       res.status(200).send(ret)
                       return
                     })
-                  })               
-                })                
+                  })
+                })
               })
             }) 
           } else {
