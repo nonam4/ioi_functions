@@ -109,7 +109,10 @@ exports.dados = functions.https.onRequest((req, res) => {
               return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').orderBy("ordem", "asc")
               .where('responsavel', '==', auth.nome).where('feito', '==', false).get().then(query => {
                 query.forEach(atendimento => {
-                  ret.atendimentos[atendimento.data().id] = atendimento.data()
+                  if(ret.clientes[atendimento.data().cliente] != undefined) {
+                    ret.atendimentos[atendimento.data().id] = atendimento.data()
+                    ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
+                  } 
                 })
   
                 return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
@@ -168,10 +171,7 @@ exports.dados = functions.https.onRequest((req, res) => {
 
                   return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
                     query.forEach(atendimento => {
-                      if(ret.clientes[atendimento.data().cliente] != undefined) {
-                        ret.atendimentos[atendimento.data().id] = atendimento.data()
-                        ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
-                      } 
+                      ret.atendimentos[atendimento.data().id] = atendimento.data()
                     })   
 
                     return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
