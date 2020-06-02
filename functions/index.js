@@ -212,6 +212,8 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
   var dia = data.getDate()
   if (dia < 10) { dia = "0" + dia }
 
+  var gerarAbastecimento = false
+
   return firestore.doc('/empresas/' + empresa + '/clientes/' + id).get().then(cliente => {
     var impressoras = new Object()
     if(cliente.data().impressoras != undefined && cliente.data().impressoras[serial] !== undefined) {
@@ -260,6 +262,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         var nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
         if(nivel <= 0) {
           impressoras.impressoras[serial].tinta.nivel = 0
+          gerarAbastecimento = true
         } else {
           impressoras.impressoras[serial].tinta.nivel = nivel
         }
@@ -295,11 +298,41 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
       }
     }
     return firestore.doc('/empresas/' + empresa + '/clientes/' + id).set(impressoras, {merge: true}).then(() => {
-      res.status(200).send("ok")
-      return
+      if(gerarAbastecimento) {
+        gerarAtendimento(res, id, empresa, ano + '-' + mes + '-' + dia)
+      } else {
+        res.status(200).send("ok")
+        return
+      }
     })
   })
 })
+
+const gerarAtendimento = (res, id, empresa, data) => {
+  return firestore.doc('/empresas/' + empresa + '/atendimentos/' + id).get().then(query => {
+    
+    var atendimento = new Object()
+    atendimento.cliente = id
+    atendimento.datas = {
+      inicio: data,
+      fim: ''
+    }
+    atendimento.feito = false
+    atendimento.id = id
+    atendimento.motivo = ['Abastecimento']
+    atendimento.ordem = 0
+    atendimento.responsavel = ''
+
+    if (query.exists && !query.data().feito && query.data().responsavel != '') {
+      atendimento.responsavel = query.data().responsavel
+    } 
+  
+    return firestore.doc('/empresas/' + empresa + '/atendimentos/' + id).set(atendimento, {merge: true}).then(() => {
+      res.status(200).send("ok")
+      return
+    })
+  })  
+}
 
 /*
 * funções de controle do site
