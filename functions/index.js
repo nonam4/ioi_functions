@@ -257,7 +257,12 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
       if(cliente.data().impressoras[serial].tinta.capacidade !== "ilimitado") {
         impressoras.impressoras[serial].tinta = new Object()
         impressoras.impressoras[serial].tinta.impresso = leitura - cliente.data().impressoras[serial].tinta.cheio
-        impressoras.impressoras[serial].tinta.nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
+        var nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
+        if(nivel <= 0) {
+          impressoras.impressoras[serial].tinta.nivel = 0
+        } else {
+          impressoras.impressoras[serial].tinta.nivel = nivel
+        }
       }
     } else {
       //caso seja uma impressora nova
