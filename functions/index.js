@@ -28,22 +28,17 @@ exports.dados = functions.https.onRequest((req, res) => {
     }
 
     const plataforma = req.query.plataforma
+    const sistema = req.query.sistema
+    const versao = req.query.versao
     //se a plataforma for o coletor, essa id será a id unica do cliente em /empresas/{dbkey}/clientes/{id}
     //será necessário fazer uma busca no banco de dados pelo documento com a id igual essa id
     switch (plataforma) {
       case 'coletor':
 
-        const sistema = req.query.sistema
-        const versao = req.query.versao
         const id = req.query.id
         const local = req.query.local
 
         return firestore.doc('/sistema/coletor').get().then(coletor => {
-
-          var data = new Date()
-          var ano = data.getFullYear()
-          var mes = data.getMonth() + 1
-          if (mes < 10) { mes = "0" + mes }
 
           const server = coletor.data().versao
           var ret = new Object()
@@ -79,56 +74,75 @@ exports.dados = functions.https.onRequest((req, res) => {
         })
       case 'mobile':
         
-        var usuario = req.query.usuario
-        var senha = req.query.senha
-        var auth = new Object()
-        auth.autenticado = false
+        return firestore.doc('/sistema/app').get().then(app => {
 
-        return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
-          query.forEach(usuario => {
-            auth.nome = usuario.data().nome
-            auth.usuario = usuario.data().usuario
-            auth.senha = usuario.data().senha
-            auth.empresa = usuario.data().empresa
-            auth.permissao = usuario.data().permissao
-            auth.autenticado = true
-          })
+          const server = app.data().versao
           var ret = new Object()
-          ret.auth = auth
-          if(auth.autenticado) {
-            
-            ret.clientes = {}
-            ret.atendimentos = {}
-            ret.suprimentos = {}
-            
-            return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
-              query.forEach(cliente => {
-                ret.clientes[cliente.data().id] = cliente.data()
-              })
+          console.log('server - ', server, ' local - ', versao)
+          ret.atualizar = compare(versao, server)
 
-              return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').orderBy("ordem", "asc")
-              .where('responsavel', '==', auth.nome).where('feito', '==', false).get().then(query => {
-                query.forEach(atendimento => {
-                  if(ret.clientes[atendimento.data().cliente] != undefined) {
-                    ret.atendimentos[atendimento.data().id] = atendimento.data()
-                    ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
-                  } 
-                })
-  
-                return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
-                  query.forEach(suprimento => {
-                    ret.suprimentos[suprimento.data().id] = suprimento.data()
-                  })
-    
-                  res.status(200).send(ret)
-                  return
-                })              
-              })
-            })
-            
-          } else {
+          if(ret.atualizar) {
+            console.log('retornando atualização')
+            ret.versao = server
+            if(sistema === 'android') {
+              ret.url = app.data().android
+            } else {
+              ret.url = app.data().ios
+            }
             res.status(200).send(ret)
             return
+          } else {
+            console.log('atualização desnecessária')
+            var usuario = req.query.usuario
+            var senha = req.query.senha
+            var auth = new Object()
+            auth.autenticado = false
+
+            return firestore.collection('/usuarios/').where('usuario', '==', usuario).where('senha', '==', senha).get().then(query => {
+              query.forEach(usuario => {
+                auth.nome = usuario.data().nome
+                auth.usuario = usuario.data().usuario
+                auth.senha = usuario.data().senha
+                auth.empresa = usuario.data().empresa
+                auth.permissao = usuario.data().permissao
+                auth.autenticado = true
+              })
+              ret.auth = auth
+              if(auth.autenticado) {
+                
+                ret.clientes = {}
+                ret.atendimentos = {}
+                ret.suprimentos = {}
+                
+                return firestore.collection('/empresas/' + auth.empresa + '/clientes').get().then(query => {
+                  query.forEach(cliente => {
+                    ret.clientes[cliente.data().id] = cliente.data()
+                  })
+
+                  return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').orderBy("ordem", "asc")
+                  .where('responsavel', '==', auth.nome).where('feito', '==', false).get().then(query => {
+                    query.forEach(atendimento => {
+                      if(ret.clientes[atendimento.data().cliente] != undefined) {
+                        ret.atendimentos[atendimento.data().id] = atendimento.data()
+                        ret.atendimentos[atendimento.data().id].dados = ret.clientes[atendimento.data().cliente]
+                      } 
+                    })
+      
+                    return firestore.collection('/empresas/' + auth.empresa + '/suprimentos').get().then(query => {
+                      query.forEach(suprimento => {
+                        ret.suprimentos[suprimento.data().id] = suprimento.data()
+                      })
+        
+                      res.status(200).send(ret)
+                      return
+                    })              
+                  })
+                })
+              } else {
+                res.status(200).send(ret)
+                return
+              }
+            })
           }
         })
       case 'web':
