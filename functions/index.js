@@ -334,6 +334,39 @@ const gerarAtendimento = (res, id, empresa, data) => {
   })  
 }
 
+exports.notificacao = functions.firestore.document('empresas/{empresa}/atendimentos/{atendimento}').onWrite((change, context) => {
+    
+  const atendimento = change.after.data()
+  if(atendimento != undefined && !atendimento.feito) {
+    
+    const responsavel = atendimento.responsavel
+    const empresa = context.params.empresa
+    var token
+
+    return admin.firestore().collection('usuarios').where('empresa', '==', empresa).where('nome', '==', responsavel).get().then(query => {
+      query.forEach(usuario => {
+        token = usuario.data().token
+        console.log('token do ' + usuario.data.nome + ' => ' + token)
+      })
+      
+      if(token != undefined && token != '') {
+        var notification = {
+          notification: {
+            title: 'Atendimentos Atualizados',
+            body: 'Atualize os dados dentro do app para ver as alterações!'
+          }, token: token
+        }
+
+        admin.messaging().send(notification).then(response => {
+          console.log('Notificação enviada com sucesso!')
+        }).catch(error => {
+          console.log('Erro enviando notificação: ' + error)
+        })
+      }
+    })
+  }
+})
+
 /*
 * funções de controle do site
 * toda requisição deverá ser autenticada e permissões devem ser verificadas
