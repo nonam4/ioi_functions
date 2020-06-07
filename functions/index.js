@@ -352,34 +352,60 @@ exports.notificacao = functions.firestore.document('empresas/{empresa}/atendimen
     
   const atendimento = change.after.data()
   if(atendimento != undefined && !atendimento.feito) {
+
+    const atual = new Date()
+    const diferenca = ultima => {
+
+      var dif = (atual.getTime() - ultima.getTime()) / 1000
+      dif /= 60
+      return Math.abs(Math.round(dif))
+    }
     
     const responsavel = atendimento.responsavel
     const empresa = context.params.empresa
     var token
+    var id
+    var notificacao
 
     return admin.firestore().collection('usuarios').where('empresa', '==', empresa).where('nome', '==', responsavel).get().then(query => {
       query.forEach(usuario => {
         token = usuario.data().token
-        console.log('token do ' + usuario.data.nome + ' => ' + token)
+        id = usuario.data().id
+        notificacao = usuario.data().notificacao
       })
-      
-      if(token != undefined && token != '') {
-        var notification = {
-          notification: {
-            title: 'Atendimentos Atualizados',
-            body: 'Atualize os dados dentro do app para ver as alterações!'
-          }, token: token
-        }
 
-        admin.messaging().send(notification).then(response => {
-          console.log('Notificação enviada com sucesso!')
-        }).catch(error => {
-          console.log('Erro enviando notificação: ' + error)
-        })
+      if(token != undefined && token != '') {
+        if(notificacao != undefined && notificacao != '') {
+          if(diferenca(notificacao.toDate()) > 30) {
+            gravarData(id, token, atual)
+          }
+        } else {
+          gravarData(id, token, atual)
+        }
       }
     })
   }
 })
+
+const gravarData = (id, token, data) => {
+  return firestore.doc('/usuarios/' + id).set({
+    notificacao: data
+  }, {merge: true}).then(() => {
+
+    var notificacao = {
+      notification: {
+        title: 'Atendimentos Atualizados',
+        body: 'Atualize os dados dentro do app para ver as alterações!'
+      }, token: token
+    }
+
+    admin.messaging().send(notificacao).then(response => {
+      console.log('Notificação enviada com sucesso!')
+    }).catch(error => {
+      console.log('Erro enviando notificação: ' + error)
+    })
+  })
+}
 
 /*
 * funções de controle do site
