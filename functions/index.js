@@ -45,13 +45,16 @@ exports.dados = functions.https.onRequest((req, res) => {
           ret.valid = false
           ret.atualizar = compare(versao, server)
 
-          if(ret.atualizar) {
+          if(ret.atualizar && sistema === 'win32') {
             ret.versao = server
+            /*
             if(sistema === 'win32') {
               ret.url = coletor.data().windows
             } else {
               ret.url = coletor.data().linux
             }
+            */
+            ret.url = coletor.data().windows
             res.status(200).send(ret)
             return
           } else {
