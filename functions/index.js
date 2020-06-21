@@ -47,14 +47,11 @@ exports.dados = functions.https.onRequest((req, res) => {
 
           if(ret.atualizar && sistema === 'win32') {
             ret.versao = server
-            /*
             if(sistema === 'win32') {
               ret.url = coletor.data().windows
             } else {
               ret.url = coletor.data().linux
             }
-            */
-            ret.url = coletor.data().windows
             res.status(200).send(ret)
             return
           } else {
@@ -81,11 +78,9 @@ exports.dados = functions.https.onRequest((req, res) => {
 
           const server = app.data().versao
           var ret = new Object()
-          console.log('server - ', server, ' local - ', versao)
           ret.atualizar = compare(versao, server)
 
           if(ret.atualizar) {
-            console.log('retornando atualização')
             ret.versao = server
             if(sistema === 'android') {
               ret.url = app.data().android
@@ -95,7 +90,6 @@ exports.dados = functions.https.onRequest((req, res) => {
             res.status(200).send(ret)
             return
           } else {
-            console.log('atualização desnecessária')
             var usuario = req.query.usuario
             var senha = req.query.senha
             var auth = new Object()
