@@ -443,8 +443,8 @@ exports.gravarToken = functions.https.onRequest((req, res) => {
 
 exports.gravarCliente = functions.https.onRequest((req, res) => {
   corsHandler(req, res, async () => {
-    const usuario = req.query.usuario
-    const senha = req.query.senha
+    const usuario = req.body.usuario
+    const senha = req.body.senha
     var auth = new Object()
     auth.autenticado = false
 
@@ -458,7 +458,7 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
         if(auth.permissao.criar || auth.permissao.modificar) {
 
           auth.erro = false
-          var cliente = JSON.parse(req.query.cliente)
+          var cliente = JSON.parse(req.body.cliente)
           cliente.empresa = auth.empresa
           return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
             res.status(200).send(auth)
