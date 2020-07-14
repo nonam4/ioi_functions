@@ -265,7 +265,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         }
       }
       //atualiza os niveis de tinta de acordo com a capacidade dele
-      if(cliente.data().impressoras[serial].tinta.capacidade !== "ilimitado") {
+      if(cliente.data().impressoras[serial].tinta.capacidade !== "ilimitado" && cliente.data().impressoras[serial].ativa) {
         impressoras.impressoras[serial].tinta = new Object()
         impressoras.impressoras[serial].tinta.impresso = leitura - cliente.data().impressoras[serial].tinta.cheio
         var nivel = parseInt(100 - ((100 * impressoras.impressoras[serial].tinta.impresso) / cliente.data().impressoras[serial].tinta.capacidade))
