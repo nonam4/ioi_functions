@@ -233,6 +233,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         impressoras = {
           impressoras: {
             [serial]: {
+              ip: ip,
               leituras: {
                 [ano + "-" + mes]: {
                   final: {
@@ -262,6 +263,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         impressoras = {
           impressoras: {
             [serial]: {
+              ip: ip,
               leituras: {
                 [ano + "-" + mes]: {
                   inicial: {
