@@ -459,11 +459,26 @@ exports.gravarCliente = functions.https.onRequest((req, res) => {
 
           auth.erro = false
           var cliente = JSON.parse(req.body.cliente)
-          cliente.empresa = auth.empresa
-          return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
-            res.status(200).send(auth)
-            return
-          })
+          if(cliente.deletar) {
+            
+            if(auth.permissao.excluir) {
+              return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).delete().then(() => {
+                res.status(200).send(auth)
+                return
+              })
+            } else {
+              auth.erro = true
+              auth.msg = "Usuário sem permissão! Nenhuma alteração foi realizada!"
+              res.status(200).send(auth)
+              return
+            }
+          } else {
+            cliente.empresa = auth.empresa
+            return firestore.doc('/empresas/' + auth.empresa + '/clientes/' + cliente.id).set(cliente, {merge: true}).then(() => {
+              res.status(200).send(auth)
+              return
+            })
+          }
         } else {
           auth.erro = true
           auth.msg = "Usuário sem permissão! Nenhuma alteração foi realizada!"
