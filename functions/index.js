@@ -560,7 +560,16 @@ exports.gravarSuprimentos = functions.https.onRequest((req, res) => {
             var suprimento = suprimentos[Object.keys(suprimentos)[y]]   
         
             var ref = firestore.doc('/empresas/' + auth.empresa + '/suprimentos/' + suprimento.id)
-            batch.set(ref, suprimento, {merge: true})
+            if(suprimento.deletar) {
+              if(auth.permissao.excluir) {
+                batch.delete(ref)
+              } else {
+                auth.erro = true
+                auth.msg = "Usuário sem permissão de excluir dados! Nenhuma exclusão foi realizada!"
+              }
+            } else {
+              batch.set(ref, suprimento, {merge: true})
+            }
           }
 
           batch.commit().then(() => {
