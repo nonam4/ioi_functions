@@ -233,6 +233,7 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         impressoras = {
           impressoras: {
             [serial]: {
+              ip: ip,
               leituras: {
                 [ano + "-" + mes]: {
                   final: {
@@ -246,13 +247,27 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
         }
       } else {
         //caso seja um mês novo
+        //o sistema vai verificar se tem leitura no mês anterior
+        //se tiver, a leitura inicial do mês novo será a leitura final do mês passado
+        var finalMesPassado
+        var mesAnterior = data.getMonth()
+        if(mesAnterior < 1) { mesAnterior = 12 }
+        if(mesAnterior < 10) { mesAnterior = "0" + mesAnterior }
+        var leiturasMesPassado = cliente.data().impressoras[serial].leituras[ano + "-" + mesAnterior]
+        if(leiturasMesPassado !== undefined) {
+          finalMesPassado = leiturasMesPassado.final.valor
+        } else {
+          finalMesPassado = leitura
+        }
+    
         impressoras = {
           impressoras: {
             [serial]: {
+              ip: ip,
               leituras: {
                 [ano + "-" + mes]: {
                   inicial: {
-                    valor: leitura,
+                    valor: finalMesPassado,
                     dia: dia
                   }, final: {
                     valor: leitura,
