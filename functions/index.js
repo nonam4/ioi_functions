@@ -45,13 +45,14 @@ exports.dados = functions.https.onRequest((req, res) => {
           ret.valid = false
           ret.atualizar = compare(versao, server)
 
+          //o sistema irá retornar a url de download por motivos do 'force update'
+          if(sistema === 'win32') {
+            ret.url = coletor.data().windows
+          } else {
+            ret.url = coletor.data().linux
+          }
+          ret.versao = server
           if(ret.atualizar && sistema === 'win32') {
-            ret.versao = server
-            if(sistema === 'win32') {
-              ret.url = coletor.data().windows
-            } else {
-              ret.url = coletor.data().linux
-            }
             res.status(200).send(ret)
             return
           } else {
