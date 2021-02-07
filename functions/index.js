@@ -181,7 +181,7 @@ exports.dados = functions.https.onRequest((req, res) => {
                     ret.clientes[cliente.data().id] = cliente.data()
                   })
 
-                  return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').get().then(query => {
+                  return firestore.collection('/empresas/' + auth.empresa + '/atendimentos').orderBy('id', 'desc').limit(100).get().then(query => {
                     query.forEach(atendimento => {
                       ret.atendimentos[atendimento.data().id] = atendimento.data()
                     })   
