@@ -323,12 +323,14 @@ exports.gravarImpressora = functions.https.onRequest((req, res) => {
       }
     }
     return firestore.doc('/empresas/' + empresa + '/clientes/' + id).set(impressoras, {merge: true}).then(() => {
-      if(gerarAbastecimento) {
-        gerarAtendimento(res, id, empresa, ano + '-' + mes + '-' + dia)
-      } else {
-        res.status(200).send("ok")
-        return
-      }
+        return firestore.doc('/historico/' + serial).set({[ano + '.' + mes + '.' + dia]: leitura, modelo}, {merge: true}).then(() => {
+            if(gerarAbastecimento) {
+                gerarAtendimento(res, id, empresa, ano + '-' + mes + '-' + dia)
+            } else {
+                res.status(200).send("ok")
+                return
+            }
+        })
     })
   })
 })
